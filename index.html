@@ -37,6 +37,9 @@
         top: 0;
         z-index: 50;
       }
+      .cursor-pointer {
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
@@ -117,7 +120,7 @@
           cpuLink: "https://browser.geekbench.com/v6/cpu/8620706",
           gpuLink: null,
         },
-      ].sort((a, b) => b.multi - a.multi);
+      ];
 
       function CustomTooltip({ active, payload, label, darkMode }) {
         if (active && payload && payload.length) {
@@ -197,12 +200,23 @@
         const [viewMode, setViewMode] = React.useState("list");
         const [selectedMetric, setSelectedMetric] = React.useState("single");
         const [sortBy, setSortBy] = React.useState("multi");
+        const [sortDirection, setSortDirection] = React.useState("desc"); // New state for sorting direction
         const [filterText, setFilterText] = React.useState("");
         const [isLoading, setIsLoading] = React.useState(true);
 
         const maxSingle = Math.max(...benchmarks.map((d) => d.single));
         const maxMulti = Math.max(...benchmarks.map((d) => d.multi));
         const maxGpu = Math.max(...benchmarks.map((d) => d.gpu));
+
+        const handleHeaderClick = (metric) => {
+          if (sortBy === metric) {
+            // Toggle direction
+            setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+          } else {
+            setSortBy(metric);
+            setSortDirection("desc"); // Default to descending on new column
+          }
+        };
 
         React.useEffect(() => {
           const savedDarkMode = localStorage.getItem("darkMode") === "true";
@@ -229,21 +243,34 @@
           localStorage.setItem("sortBy", sortBy);
         }, [viewMode, selectedMetric, sortBy]);
 
+        React.useEffect(() => {
+          setSortBy(selectedMetric);
+          setSortDirection("desc");
+        }, [selectedMetric]);
+
         const filteredBenchmarks = benchmarks.filter((benchmark) =>
           benchmark.name.toLowerCase().includes(filterText.toLowerCase())
         );
 
         const sortedBenchmarks = React.useMemo(() => {
-          if (sortBy === "default") {
-            return benchmarks;
-          } else if (sortBy === "single") {
-            return filteredBenchmarks.sort((a, b) => b.single - a.single);
+          let sorted = filteredBenchmarks.slice();
+          if (sortBy === "single") {
+            sorted.sort((a, b) =>
+              sortDirection === "asc"
+                ? a.single - b.single
+                : b.single - a.single
+            );
           } else if (sortBy === "multi") {
-            return filteredBenchmarks.sort((a, b) => b.multi - a.multi);
+            sorted.sort((a, b) =>
+              sortDirection === "asc" ? a.multi - b.multi : b.multi - a.multi
+            );
           } else {
-            return filteredBenchmarks.sort((a, b) => b.gpu - a.gpu);
+            sorted.sort((a, b) =>
+              sortDirection === "asc" ? a.gpu - b.gpu : b.gpu - a.gpu
+            );
           }
-        }, [sortBy, filteredBenchmarks]);
+          return sorted;
+        }, [sortBy, sortDirection, filteredBenchmarks]);
 
         const chartData = React.useMemo(() => {
           return sortedBenchmarks.map((benchmark) => ({
@@ -355,25 +382,82 @@
                               Device
                             </div>
                             <div
-                              className={`text-sm font-medium ${
+                              className={`text-sm font-medium cursor-pointer flex items-center ${
                                 darkMode ? "text-gray-400" : "text-gray-500"
                               }`}
+                              onClick={() => handleHeaderClick("single")}
                             >
                               Single-Core
+                              <svg
+                                className={`w-4 h-4 ml-1 transition-transform ${
+                                  sortBy === "single" && sortDirection === "asc"
+                                    ? "rotate-180"
+                                    : ""
+                                }`}
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M5 15l7-7 7 7"
+                                />
+                              </svg>
                             </div>
                             <div
-                              className={`text-sm font-medium ${
+                              className={`text-sm font-medium cursor-pointer flex items-center ${
                                 darkMode ? "text-gray-400" : "text-gray-500"
                               }`}
+                              onClick={() => handleHeaderClick("multi")}
                             >
                               Multi-Core
+                              <svg
+                                className={`w-4 h-4 ml-1 transition-transform ${
+                                  sortBy === "multi" && sortDirection === "asc"
+                                    ? "rotate-180"
+                                    : ""
+                                }`}
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M5 15l7-7 7 7"
+                                />
+                              </svg>
                             </div>
                             <div
-                              className={`text-sm font-medium ${
+                              className={`text-sm font-medium cursor-pointer flex items-center ${
                                 darkMode ? "text-gray-400" : "text-gray-500"
                               }`}
+                              onClick={() => handleHeaderClick("gpu")}
                             >
                               GPU Score
+                              <svg
+                                className={`w-4 h-4 ml-1 transition-transform ${
+                                  sortBy === "gpu" && sortDirection === "asc"
+                                    ? "rotate-180"
+                                    : ""
+                                }`}
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M5 15l7-7 7 7"
+                                />
+                              </svg>
                             </div>
                           </div>
                         </div>
@@ -489,38 +573,6 @@
                       </div>
                       {/* Sorting and Filtering */}
                       <div className="flex justify-between items-center mt-4">
-                        <div
-                          className={`inline-flex rounded-full p-1 ${
-                            darkMode ? "bg-gray-800" : "bg-gray-100"
-                          }`}
-                        > 
-                          {["default", "single", "multi", "gpu"].map(
-                            (metric) => (
-                              <button
-                                key={metric}
-                                onClick={() => setSortBy(metric)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                                  sortBy === metric
-                                    ? `${
-                                        darkMode
-                                          ? "bg-gray-700 text-white"
-                                          : "bg-white text-gray-900"
-                                      } shadow-sm`
-                                    : `${
-                                        darkMode
-                                          ? "text-gray-400 hover:text-gray-300"
-                                          : "text-gray-500 hover:text-gray-900"
-                                      }`
-                                }`}
-                                aria-pressed={sortBy === metric}
-                                aria-label={`Sort by ${metric}`}
-                              >
-                                {metric.charAt(0).toUpperCase() +
-                                  metric.slice(1)}
-                              </button>
-                            )
-                          )}
-                        </div>
                         <div className="flex items-center">
                           <label
                             htmlFor="filter"
@@ -547,6 +599,7 @@
                       </div>
                     </div>
                   )}
+
                   {/* Graphs View */}
                   {viewMode === "graphs" && (
                     <div className="space-y-8">
